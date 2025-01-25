@@ -2,7 +2,7 @@ import pygame, sys, random, copy, time, collections, os, json
 from pygame.locals import *
 from datetime import datetime
 
-
+"""Đặt các cấu hình mặc định"""
 FPS = 60
 WINDOWWIDTH = 1400
 WINDOWHEIGHT = 680
@@ -44,125 +44,29 @@ barSize = (TIMEBAR_LENGTH, TIMEBAR_WIDTH)
 borderColor = WHITE
 barColor = BOLDGREEN
 ACCOUNTS_FILE = "User_data/accounts.json"
+# Load pictures
+aegis = pygame.image.load('Resources/others/aegis_2.jpg')
+aegis = pygame.transform.scale(aegis, (45, 45))
+pygame.font.init()
+# Load background
+startBG = pygame.image.load('Resources/Background/startBG.jpg')
+startBG = pygame.transform.scale(startBG, (WINDOWWIDTH, WINDOWHEIGHT))
+BG = pygame.image.load('Resources/Background/main.png')
+BG = pygame.transform.scale(BG, (WINDOWWIDTH, WINDOWHEIGHT))
+# Load sound and musicbbb
+pygame.mixer.pre_init()
+pygame.mixer.init()
+clickSound = pygame.mixer.Sound('Resources/sound_effect/click_selecting.mp3')
+getPointSound = pygame.mixer.Sound('Resources/sound_effect/victory.mp3')
+WrongSound = pygame.mixer.Sound('Resources/sound_effect/wrong.mp3')
+startScreenSound = pygame.mixer.Sound('Resources/sound_effect/warriors-of-the-night-assemble.wav')
+listMusicBG = ["Resources/BGmusic/" + i for i in os.listdir("Resources/BGmusic")]
 
-def change_size():
-    global XMARGIN, YMARGIN, BOXSIZE
-    if BOARDWIDTH == 14:
-        BOXSIZE = 55
-    elif BOARDWIDTH == 20:
-        BOXSIZE = 44
-    XMARGIN = (WINDOWWIDTH - (BOXSIZE * BOARDWIDTH)) // 2
-    YMARGIN = (WINDOWHEIGHT - (BOXSIZE * BOARDHEIGHT)) // 2
 
-def showStartScreen():
-    startScreenSound.play()
-    while True:
-        DISPLAYSURF.blit(startBG, (0, 0))
-        newGameSurf = BASICFONT.render('NEW GAME', True, YELLOW, BLACK)
-        newGameRect = newGameSurf.get_rect()
-        newGameRect.center = (WINDOWWIDTH // 2, 4 * WINDOWHEIGHT // 8)
-        DISPLAYSURF.blit(newGameSurf, newGameRect)
-        pygame.draw.rect(DISPLAYSURF, BLACK, newGameRect, 4)
-        SettingSurf = BASICFONT.render('SETTINGS', True, YELLOW, BLACK)
-        SettingRect = SettingSurf.get_rect()
-        SettingRect.center = (WINDOWWIDTH // 2, 5 * WINDOWHEIGHT // 8)
-        DISPLAYSURF.blit(SettingSurf, SettingRect)
-        pygame.draw.rect(DISPLAYSURF, BLACK, SettingRect, 4)
-        ContinueSurf = BASICFONT.render('CONTINUE', True, YELLOW, BLACK)
-        ContinueRect = ContinueSurf.get_rect()
-        ContinueRect.center = (WINDOWWIDTH // 2, 3 * WINDOWHEIGHT // 8)
-        DISPLAYSURF.blit(ContinueSurf, ContinueRect)
-        pygame.draw.rect(DISPLAYSURF, BLACK, ContinueRect, 4)
-        # Render "LEADERBOARD" button
-        leaderboardSurf = BASICFONT.render('LEADERBOARD', True, YELLOW, BLACK)  # Nội dung nút
-        leaderboardRect = leaderboardSurf.get_rect()
-        leaderboardRect.center = (WINDOWWIDTH // 2, 6 * WINDOWHEIGHT // 8)  # Vị trí nút
-        DISPLAYSURF.blit(leaderboardSurf, leaderboardRect)  # Vẽ text lên màn hình
-        pygame.draw.rect(DISPLAYSURF, BLACK, leaderboardRect, 4)
-        # Render "EXIT" button
-        exitSurf = BASICFONT.render('EXIT', True, YELLOW, BLACK)
-        exitRect = exitSurf.get_rect()
-        exitRect.center = (WINDOWWIDTH // 2, 7 * WINDOWHEIGHT // 8 )
-        DISPLAYSURF.blit(exitSurf, exitRect)
-        pygame.draw.rect(DISPLAYSURF, BLACK, ContinueRect, 4)
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                pygame.quit()
-                sys.exit()
-            elif event.type == MOUSEBUTTONUP:
-                mousex, mousey = event.pos
-                if newGameRect.collidepoint((mousex, mousey)):
-                    return "Newgame"
-                elif SettingRect.collidepoint((mousex, mousey)):
-                    return "Setting"
-                elif ContinueRect.collidepoint((mousex, mousey)):
-                    return "Continue"
-                elif exitRect.collidepoint((mousex, mousey)):
-                    pygame.quit()
-                    sys.exit()  # Quit the application
-                    # Xử lý click vào nút "LEADERBOARD"
-                elif leaderboardRect.collidepoint((mousex, mousey)):
-                    showLeaderboard(DISPLAYSURF, BASICFONT, WINDOWWIDTH, WINDOWHEIGHT)
-                    return
-        pygame.display.update()
-        FPSCLOCK.tick(FPS)
+"""Xử lý đăng kí, đăng nhập tài khoản"""
 
-def save_leaderboard(leaderboard, filename="User_data/scoreboard.json"):
-    with open(filename, "w") as file:
-        json.dump(leaderboard, file)
-
-def load_leaderboard(filename="User_data/scoreboard.json"):
-    try:
-        with open(filename, "r") as file:
-            return json.load(file)  # Trả về danh sách
-    except FileNotFoundError:
-        return {}
-
-def showLeaderboard(screen, font, WINDOWWIDTH, WINDOWHEIGHT):
-    clock = pygame.time.Clock()  # Khởi tạo clock đúng cách
-    leaderboard = load_leaderboard()  # Đọc dữ liệu từ file
-    sorted_keys = sorted(leaderboard, key = lambda x: leaderboard[x], reverse= True)
-    if len(sorted_keys) >= 10:
-        sorted_keys =sorted_keys[:10]
-    running = True
-    while running:
-        screen.fill((0, 0, 50))  # Nền xanh đậm
-        title = font.render("Leaderboard", True, (255, 255, 0))
-        screen.blit(title, (200, 50))
-
-        for i, key in enumerate(sorted_keys):  # Hiển thị top 10
-            text = f"{i+1}. {key} - {leaderboard[key]}"
-            entry_text = font.render(text, True, (255, 255, 255))
-            screen.blit(entry_text, (100, 100 + i * 30))
-
-        # Vẽ nút "Return"
-        returnSurf = font.render('RETURN', True, YELLOW, BLACK)
-        returnRect = returnSurf.get_rect()
-        returnRect.center = (WINDOWWIDTH // 2, 4 * WINDOWHEIGHT // 5)  # Vị trí nút
-        screen.blit(returnSurf, returnRect)  # Vẽ nút lên màn hình
-        pygame.draw.rect(screen, BLACK, returnRect, 4)
-
-        pygame.display.flip()
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:  # Bấm Enter để quay lại màn hình chính
-                    running = False  # Thoát khỏi vòng lặp để quay lại màn hình chính
-            elif event.type == pygame.MOUSEBUTTONUP:
-                mousex, mousey = event.pos
-                if returnRect.collidepoint((mousex, mousey)):  # Kiểm tra click vào nút "RETURN"
-                    running = False  # Thoát vòng lặp khi click vào nút "RETURN"
-
-        clock.tick(30)  # Điều chỉnh tốc độ FPS (30 FPS)
-
-    # Sau khi thoát vòng lặp, quay lại màn hình start screen
-    return "ReturnToStartScreen"  # Trả về giá trị để quay lại màn hình chính
-
-# Kiểm tra đăng nhập
 def showLoginScreen():
+    """Hiển thị màn hình đăng nhập"""
     login_font = pygame.font.SysFont('comicsansms', 50)
     input_font = pygame.font.SysFont('comicsansms', 40)
     button_font = pygame.font.SysFont('comicsansms', 45)
@@ -254,7 +158,12 @@ def showLoginScreen():
                 elif back_button_rect.collidepoint(mousex, mousey):
                     return main()
 
+
+
+
+
 def check_login(username, password):
+    """Kiểm tra thông tin đăng nhập"""
     global USER, USER_NAME
     try:
         with open(ACCOUNTS_FILE, "r") as f:
@@ -282,6 +191,7 @@ def check_login(username, password):
         return False
 
 def register_account(username, password):
+    """Xử lý đăng ký tài khoản"""
     global USER, USER_NAME
     try:
         with open(ACCOUNTS_FILE, "r") as f:
@@ -296,10 +206,10 @@ def register_account(username, password):
     USER_NAME = username.lower()
     with open(ACCOUNTS_FILE, "w") as f:
         json.dump(accounts, f, indent = 4)
-
     return True
 
 def showRegisterScreen():
+    """Màn hình đăng kí"""
     login_font = pygame.font.SysFont('comicsansms', 50)
     input_font = pygame.font.SysFont('comicsansms', 40)
     button_font = pygame.font.SysFont('comicsansms', 45)
@@ -362,6 +272,7 @@ def showRegisterScreen():
         pygame.draw.rect(DISPLAYSURF, BLACK, back_button_rect)
         DISPLAYSURF.blit(back_button_text, back_button_text_rect)
         
+
         pygame.display.update()
 
         # Xử lý sự kiện
@@ -395,8 +306,10 @@ def showRegisterScreen():
                 elif back_button_rect.collidepoint(mousex, mousey):
                     return main()
 
+
 # Hàm vẽ màn hình đăng nhập
 def showMainAuthScreen():
+    """Hiển thị màn hình đăng nhập, đăng ký"""
     login_font = pygame.font.SysFont('comicsansms', 50)
     button_font = pygame.font.SysFont('comicsansms', 45)
 
@@ -435,17 +348,259 @@ def showMainAuthScreen():
                     showRegisterScreen()  # Hiển thị màn hình đăng ký
                 return False
 
-def display_score(score = 0):
-    ScoreFont = pygame.font.Font('freesansbold.ttf', 30)
-    ScoreSurf = ScoreFont.render(f'Score: {score}', True, YELLOW)
-    ScoreRect = ScoreSurf.get_rect()
-    ScoreRect.center = (9 * WINDOWWIDTH // 10, WINDOWHEIGHT // 10)
-    DISPLAYSURF.blit(ScoreSurf, ScoreRect)
-    pygame.draw.rect(DISPLAYSURF, YELLOW, ScoreRect, -1)
-    pygame.display.update()
 
-# Tạo một dictionary để lưu trữ các hình ảnh đã được scale
+"""Màn hình khởi đầu và các nút"""
+
+def showStartScreen():
+    startScreenSound.play()
+    while True:
+        DISPLAYSURF.blit(startBG, (0, 0))
+        newGameSurf = BASICFONT.render('NEW GAME', True, YELLOW, BLACK)
+        newGameRect = newGameSurf.get_rect()
+        newGameRect.center = (WINDOWWIDTH // 2, 4 * WINDOWHEIGHT // 8)
+        DISPLAYSURF.blit(newGameSurf, newGameRect)
+        pygame.draw.rect(DISPLAYSURF, BLACK, newGameRect, 4)
+        SettingSurf = BASICFONT.render('SETTINGS', True, YELLOW, BLACK)
+        SettingRect = SettingSurf.get_rect()
+        SettingRect.center = (WINDOWWIDTH // 2, 5 * WINDOWHEIGHT // 8)
+        DISPLAYSURF.blit(SettingSurf, SettingRect)
+        pygame.draw.rect(DISPLAYSURF, BLACK, SettingRect, 4)
+        ContinueSurf = BASICFONT.render('CONTINUE', True, YELLOW, BLACK)
+        ContinueRect = ContinueSurf.get_rect()
+        ContinueRect.center = (WINDOWWIDTH // 2, 3 * WINDOWHEIGHT // 8)
+        DISPLAYSURF.blit(ContinueSurf, ContinueRect)
+        pygame.draw.rect(DISPLAYSURF, BLACK, ContinueRect, 4)
+        # Render "LEADERBOARD" button
+        leaderboardSurf = BASICFONT.render('LEADERBOARD', True, YELLOW, BLACK)  # Nội dung nút
+        leaderboardRect = leaderboardSurf.get_rect()
+        leaderboardRect.center = (WINDOWWIDTH // 2, 6 * WINDOWHEIGHT // 8)  # Vị trí nút
+        DISPLAYSURF.blit(leaderboardSurf, leaderboardRect)  # Vẽ text lên màn hình
+        pygame.draw.rect(DISPLAYSURF, BLACK, leaderboardRect, 4)
+        # Render "EXIT" button
+        exitSurf = BASICFONT.render('EXIT', True, YELLOW, BLACK)
+        exitRect = exitSurf.get_rect()
+        exitRect.center = (WINDOWWIDTH // 2, 7 * WINDOWHEIGHT // 8 )
+        DISPLAYSURF.blit(exitSurf, exitRect)
+        pygame.draw.rect(DISPLAYSURF, BLACK, ContinueRect, 4)
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == MOUSEBUTTONUP:
+                mousex, mousey = event.pos
+                if newGameRect.collidepoint((mousex, mousey)):
+                    return "Newgame"
+                elif SettingRect.collidepoint((mousex, mousey)):
+                    return "Setting"
+                elif ContinueRect.collidepoint((mousex, mousey)):
+                    return "Continue"
+                elif exitRect.collidepoint((mousex, mousey)):
+                    pygame.quit()
+                    sys.exit()  # Quit the application
+                    # Xử lý click vào nút "LEADERBOARD"
+                elif leaderboardRect.collidepoint((mousex, mousey)):
+                    showLeaderboard(DISPLAYSURF, BASICFONT, WINDOWWIDTH, WINDOWHEIGHT)
+                    return
+        pygame.display.update()
+        FPSCLOCK.tick(FPS)
+
+
+"""Bảng Setting"""
+
+# Các nút
+buttons = {
+    "Board: 12 x 7": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 -100, 200, 50), "text": "Board: 12 x 7", "color": GREEN},
+    "Board: 14 x 8": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 -25, 200, 50), "text": "Board: 14 x 8", "color": GRAY},
+    "Board: 18 x 10": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 + 50, 200, 50), "text": "Board: 18 x 10", "color": GRAY},
+    "sound_toggle": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 + 125, 200, 50), "text": "Sound: ON", "color": GRAY},
+    "back": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 + 200, 200, 50), "text": "Back", "color": YELLOW},
+}
+
+
+
+def draw_background():
+    """Vẽ Background"""
+    DISPLAYSURF.fill(BLACK)
+
+
+def draw_settings_box():
+    """Vẽ bảng cài đặt."""
+    box_rect = pygame.Rect(WINDOWWIDTH//2 - 200, WINDOWHEIGHT//2 - 225, 400, 500)
+    pygame.draw.rect(DISPLAYSURF, SKIN_COLOR, box_rect, border_radius=20)
+    pygame.draw.rect(DISPLAYSURF, WHITE, box_rect, 3, border_radius=20)
+
+
+def draw_title():
+    """Vẽ tiêu đề bảng settings với viền."""
+    title_text = "Settings"
+    outline_color = BLACK  # Màu viền
+    text_color = YELLOW  # Màu chữ
+
+    # Tạo chữ có viền bằng cách render nhiều lớp xung quanh
+    for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2), (0, -2), (0, 2), (-2, 0), (2, 0)]:
+        title_outline = title_font.render(title_text, True, outline_color)
+        title_rect = title_outline.get_rect(center=(WINDOWWIDTH // 2 + dx,WINDOWHEIGHT//2 - 150 + dy))
+        DISPLAYSURF.blit(title_outline, title_rect)
+
+    # Vẽ chữ chính
+    title = title_font.render(title_text, True, text_color)
+    title_rect = title.get_rect()
+    title_rect.center = ((WINDOWWIDTH//2, WINDOWHEIGHT//2 - 150))
+    DISPLAYSURF.blit(title, title_rect)
+
+# Các nút tùy chỉnh cài đặt
+def draw_buttons():
+    """Vẽ các nút."""
+    for button in buttons.values():
+        pygame.draw.rect(DISPLAYSURF, button["color"], button["rect"], border_radius=15)
+        text = font.render(button["text"], True, BLACK)
+        text_rect = text.get_rect(center=button["rect"].center)
+        DISPLAYSURF.blit(text, text_rect)
+
+
+# Tùy chỉnh các cài đặt phù hợp       
+def handle_click_setting():
+    """Tùy chỉnh các cài đặt bằng nhấp chuột"""
+    global BOARDWIDTH, BOARDHEIGHT, SOUND_ON, XMARGIN, YMARGIN, BOXSIZE, HEROES_DICT, LEVEL, NUMHEROES_ONBOARD, NUMSAMEHEROES
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            pygame.quit()
+            sys.exit()
+        elif event.type == MOUSEBUTTONUP:
+            mouse_x, mouse_y = event.pos
+            for key, button in buttons.items():
+                if button["rect"].collidepoint((mouse_x, mouse_y)):
+                    if key == "Board: 12 x 7":
+                        buttons["Board: 12 x 7"]["color"] = GREEN
+                        buttons["Board: 18 x 10"]["color"] = GRAY
+                        buttons["Board: 14 x 8"]["color"] = GRAY
+                        BOARDHEIGHT = 9
+                        BOARDWIDTH = 14
+                        BOXSIZE = 55
+                        NUMHEROES_ONBOARD = 21
+                        NUMSAMEHEROES = 4
+                        XMARGIN = (WINDOWWIDTH - (BOXSIZE * BOARDWIDTH)) // 2
+                        YMARGIN = (WINDOWHEIGHT - (BOXSIZE * BOARDHEIGHT)) // 2
+                        HEROES_DICT = Createheroes()
+                    elif key == "Board: 14 x 8":
+                        buttons["Board: 12 x 7"]["color"] = GRAY
+                        buttons["Board: 18 x 10"]["color"] = GRAY
+                        buttons["Board: 14 x 8"]["color"] = GREEN
+                        BOARDHEIGHT = 10
+                        BOARDWIDTH = 16
+                        BOXSIZE = 50
+                        NUMHEROES_ONBOARD = 28
+                        NUMSAMEHEROES = 4
+                        XMARGIN = (WINDOWWIDTH - (BOXSIZE * BOARDWIDTH)) // 2
+                        YMARGIN = (WINDOWHEIGHT - (BOXSIZE * BOARDHEIGHT)) // 2
+                        HEROES_DICT = Createheroes()
+                    elif key == "Board: 18 x 10":
+                        buttons["Board: 12 x 7"]["color"] = GRAY
+                        buttons["Board: 18 x 10"]["color"] = GREEN
+                        buttons["Board: 14 x 8"]["color"] = GRAY
+                        BOARDHEIGHT = 12
+                        BOARDWIDTH = 20
+                        BOXSIZE = 44
+                        NUMHEROES_ONBOARD = 45
+                        NUMSAMEHEROES = 4
+                        XMARGIN = (WINDOWWIDTH - (BOXSIZE * BOARDWIDTH)) // 2
+                        YMARGIN = (WINDOWHEIGHT - (BOXSIZE * BOARDHEIGHT)) // 2
+                        HEROES_DICT = Createheroes()
+                    elif key == "sound_toggle":
+                        SOUND_ON = not SOUND_ON  # Đảo trạng thái âm thanh
+                        buttons["sound_toggle"]["text"] = f"Sound: {'ON' if SOUND_ON else 'OFF'}"
+                        if SOUND_ON:
+                            try:
+                                pygame.mixer.music.load(listMusicBG[LEVEL - 1])  # Tải nhạc nền
+                                pygame.mixer.music.play(-1)  # Phát nhạc nền lặp lại
+                            except pygame.error as e:
+                                print(f"Error loading music: {e}")
+                        else:
+                            pygame.mixer.music.stop()  # Dừng nhạc
+                    elif key == "back":
+                        return "back"
+                    
+#Hiển thị bảng setting của trò chơi
+def showSetting():
+    """Hiển thị bảng Settings"""
+    while True:
+        draw_background()
+        draw_settings_box()
+        draw_buttons()
+        draw_title()
+        if handle_click_setting() == "back":
+            return
+        pygame.display.update()
+
+
+"""BẢNG XẾP HẠNG"""
+
+
+def save_leaderboard(leaderboard, filename="User_data/scoreboard.json"):
+    """Lưu bảng xếp hạng"""
+    with open(filename, "w") as file:
+        json.dump(leaderboard, file)
+
+
+def load_leaderboard(filename="User_data/scoreboard.json"):
+    """Load bảng xếp hạng"""
+    try:
+        with open(filename, "r") as file:
+            return json.load(file)  # Trả về danh sách
+    except FileNotFoundError:
+        return {}
+    
+
+# Hiển thị bảng xếp hạng của trò chơi
+def showLeaderboard(screen, font, WINDOWWIDTH, WINDOWHEIGHT):
+    """Hiển thị bảng xếp hạng"""
+    clock = pygame.time.Clock()  # Khởi tạo clock đúng cách
+    leaderboard = load_leaderboard()  # Đọc dữ liệu từ file
+    sorted_keys = sorted(leaderboard, key = lambda x: leaderboard[x], reverse= True)
+    if len(sorted_keys) >= 10:
+        sorted_keys =sorted_keys[:10]
+    running = True
+    while running:
+        screen.fill((0, 0, 50))  # Nền xanh đậm
+        title = font.render("Leaderboard", True, (255, 255, 0))
+        screen.blit(title, (200, 50))
+
+        for i, key in enumerate(sorted_keys):  # Hiển thị top 10
+            text = f"{i+1}. {key} - {leaderboard[key]}"
+            entry_text = font.render(text, True, (255, 255, 255))
+            screen.blit(entry_text, (100, 100 + i * 30))
+
+        # Vẽ nút "Return"
+        returnSurf = font.render('RETURN', True, YELLOW, BLACK)
+        returnRect = returnSurf.get_rect()
+        returnRect.center = (WINDOWWIDTH // 2, 4 * WINDOWHEIGHT // 5)  # Vị trí nút
+        screen.blit(returnSurf, returnRect)  # Vẽ nút lên màn hình
+        pygame.draw.rect(screen, BLACK, returnRect, 4)
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:  # Bấm Enter để quay lại màn hình chính
+                    running = False  # Thoát khỏi vòng lặp để quay lại màn hình chính
+            elif event.type == pygame.MOUSEBUTTONUP:
+                mousex, mousey = event.pos
+                if returnRect.collidepoint((mousex, mousey)):  # Kiểm tra click vào nút "RETURN"
+                    running = False  # Thoát vòng lặp khi click vào nút "RETURN"
+
+        clock.tick(30)  # Điều chỉnh tốc độ FPS (30 FPS)
+
+    # Sau khi thoát vòng lặp, quay lại màn hình start screen
+    return "ReturnToStartScreen"  # Trả về giá trị để quay lại màn hình chính
+
+#
+
+# Make a dict to store scaled images
 def Createheroes():
+    """Tạo pokemon dựa trên kích cỡ bảng"""
     LISTHEROES = os.listdir("Resources/Pokemon_icons")
     HEROES_DICT = {}
 
@@ -458,82 +613,9 @@ def Createheroes():
         HEROES_DICT[i + 1] = hero_with_border
     return HEROES_DICT
 
-# Load pictures
-aegis = pygame.image.load('Resources/others/aegis.jpg')
-aegis = pygame.transform.scale(aegis, (45, 45))
-pygame.font.init()
-# Load background
-startBG = pygame.image.load('Resources/Background/startBG.jpg')
-startBG = pygame.transform.scale(startBG, (WINDOWWIDTH, WINDOWHEIGHT))
-BG = pygame.image.load('Resources/Background/main.png')
-BG = pygame.transform.scale(BG, (WINDOWWIDTH, WINDOWHEIGHT))
-# Load sound and musicbbb
-pygame.mixer.pre_init()
-pygame.mixer.init()
-clickSound = pygame.mixer.Sound('Resources/sound_effect/click_selecting.mp3')
-getPointSound = pygame.mixer.Sound('Resources/sound_effect/victory.mp3')
-WrongSound = pygame.mixer.Sound('Resources/sound_effect/wrong.mp3')
-startScreenSound = pygame.mixer.Sound('Resources/sound_effect/warriors-of-the-night-assemble.wav')
-listMusicBG = ["Resources/BGmusic/" + i for i in os.listdir("Resources/BGmusic")]
 
-def main():
-    global FPSCLOCK, DISPLAYSURF, BASICFONT, LIVESFONT, LEVEL, font, title_font, USER, SCORE, BOARDWIDTH, BOARDHEIGHT
-    
-    # Khởi tạo Pygame
-    pygame.init()
-    pygame.mixer.init()
-    FPSCLOCK = pygame.time.Clock()
-    DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
-    pygame.display.set_caption('Pikachu')
 
-    # Khởi tạo font
-    font = pygame.font.Font(pygame.font.match_font('arial'), 32)
-    title_font = pygame.font.Font(pygame.font.match_font('arial'), 50)
-    BASICFONT = pygame.font.SysFont('comicsansms', 40)
-    LIVESFONT = pygame.font.SysFont('comicsansms', 45)
-    
-    # Hiển thị màn hình xác thực (đăng nhập/đăng ký)
-    while showMainAuthScreen():
-        continue
-
-    # Vòng lặp chính của trò chơi
-    while True:
-        # Hiển thị màn hình bắt đầu và nhận lựa chọn từ người chơi
-        choice = showStartScreen()
-        
-        # Biến cờ để kiểm tra trạng thái chơi
-        game_running = True
-
-        # Xử lý các lựa chọn từ màn hình bắt đầu
-        if choice == "Newgame" or choice == "Continue":
-            if choice == "Newgame":
-                LEVEL = 1
-                SCORE = 0
-                USER["Board"] = getRandomizedBoard()
-            else:
-                LEVEL = USER["Level"]
-                SCORE = USER["Score"]
-                BOARDWIDTH = len(USER["Board"][0])
-                BOARDHEIGHT = len(USER["Board"])
-            
-            # Cập nhật kích thước và tài nguyên
-            change_size()
-            random.shuffle(listMusicBG)
-            
-            # Vòng lặp cấp độ
-            while LEVEL <= LEVELMAX and game_running:
-                if not runGame():
-                    game_running = False
-                    break
-                LEVEL += 1
-                pygame.time.wait(1000)  # Tạm dừng giữa các cấp độ
-            
-            # Hiển thị màn hình kết thúc nếu hoàn thành trò chơi
-            if game_running:
-                showGameOverScreen()
-        elif choice == "Setting":
-            # Hiển thị cài đặt
-            showSetting()
+"""Màn hình khi dừng trò chơi"""
 
 def showPauseScreen():
     button_font = pygame.font.SysFont('comicsansms', 30)
@@ -548,6 +630,7 @@ def showPauseScreen():
 
     while True:
         DISPLAYSURF.fill(BLACK)  # Màn hình tạm dừng
+
 
         # Vẽ nút Resume
         pygame.draw.rect(DISPLAYSURF, WHITE, resume_button_rect)
@@ -571,6 +654,9 @@ def showPauseScreen():
                 elif exit_button_rect.collidepoint((mousex, mousey)):
                     return "exit"  # Quay về màn hình chính
 
+
+"""Lưu lại màn chơi"""
+
 def saveGame(mainBoard):
     USER["Board"] = mainBoard
     USER["Score"] = SCORE
@@ -580,6 +666,7 @@ def saveGame(mainBoard):
     data[USER_NAME] = USER
     with open(ACCOUNTS_FILE, "w") as file:
         json.dump(data, file)
+
 
 def handleHintMatch(mainBoard, boxy1, boxx1, boxy2, boxx2, hint):
     global TIMEBONUS
@@ -612,7 +699,6 @@ def isGameComplete(board):
         if any(cell != 0 for cell in row):  # Nếu còn ô nào khác 0
             return False
     return True  # Tất cả các ô đều là 0
-
 def runGame():
     if USER["Board"] == [[0] * BOARDWIDTH] * BOARDHEIGHT:
         USER["Board"] = getRandomizedBoard()
@@ -720,7 +806,9 @@ def runGame():
         pygame.display.update()
         FPSCLOCK.tick(FPS)
 
+
 def getRandomizedBoard():
+    """"Tạo bảng ngẫu nhiên"""
     list_pokemons = list(range(1, len(Createheroes()) + 1))
     random.shuffle(list_pokemons)
     list_pokemons = list_pokemons[:NUMHEROES_ONBOARD] * NUMSAMEHEROES
@@ -869,6 +957,7 @@ def showGameOverScreen():
     else:
         data[USER_NAME] = SCORE
 
+
     # Ghi lại tệp
     with open("User_data/scoreboard.json", "w") as leaderboard:
         json.dump(data, leaderboard, indent=4)
@@ -892,6 +981,7 @@ def showGameOverScreen():
                 if playAgainRect.collidepoint((mousex, mousey)):
                     return
 
+
 def getHint(board):
     boxPokesLocated = collections.defaultdict(list)
     for boxy in range(BOARDHEIGHT):
@@ -905,11 +995,11 @@ def getHint(board):
                     if otherBox != (boxy, boxx) and bfs(board, boxy, boxx, otherBox[0], otherBox[1]):
                         return [(boxy, boxx), otherBox]  # Trả về cặp gợi ý
     return []  # Không có gợi ý nào, trả về danh sách rỗng
-
 def drawHint(hint):
     for boxy, boxx in hint:
         left, top = leftTopCoordsOfBox(boxx, boxy)
         pygame.draw.rect(DISPLAYSURF, GREEN, (left, top, BOXSIZE, BOXSIZE), 4)  # Viền dày hơn để rõ
+
 
 def resetBoard(board):
     pokesOnBoard = []
@@ -1016,119 +1106,91 @@ def drawLives():
     livesRect.topleft = (65, 0)
     DISPLAYSURF.blit(livesSurf, livesRect)
 
-# Các nút
-buttons = {
-    "Board: 12 x 7": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 -100, 200, 50), "text": "Board: 12 x 7", "color": GREEN},
-    "Board: 14 x 8": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 -25, 200, 50), "text": "Board: 14 x 8", "color": GRAY},
-    "Board: 18 x 10": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 + 50, 200, 50), "text": "Board: 18 x 10", "color": GRAY},
-    "sound_toggle": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 + 125, 200, 50), "text": "Music: OFF", "color": GRAY},
-    "back": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 + 200, 200, 50), "text": "Back", "color": YELLOW},
-}
 
-def draw_background():
-    DISPLAYSURF.fill(BLACK)
 
-def draw_settings_box():
-    """Vẽ bảng cài đặt."""
-    box_rect = pygame.Rect(WINDOWWIDTH//2 - 200, WINDOWHEIGHT//2 - 225, 400, 500)
-    pygame.draw.rect(DISPLAYSURF, SKIN_COLOR, box_rect, border_radius=20)
-    pygame.draw.rect(DISPLAYSURF, WHITE, box_rect, 3, border_radius=20)
 
-def draw_title():
-    """Vẽ tiêu đề bảng settings với viền."""
-    title_text = "Settings"
-    outline_color = BLACK  # Màu viền
-    text_color = YELLOW  # Màu chữ
 
-    # Tạo chữ có viền bằng cách render nhiều lớp xung quanh
-    for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2), (0, -2), (0, 2), (-2, 0), (2, 0)]:
-        title_outline = title_font.render(title_text, True, outline_color)
-        title_rect = title_outline.get_rect(center=(WINDOWWIDTH // 2 + dx,WINDOWHEIGHT//2 - 150 + dy))
-        DISPLAYSURF.blit(title_outline, title_rect)
 
-    # Vẽ chữ chính
-    title = title_font.render(title_text, True, text_color)
-    title_rect = title.get_rect()
-    title_rect.center = ((WINDOWWIDTH//2, WINDOWHEIGHT//2 - 150))
-    DISPLAYSURF.blit(title, title_rect)
 
-def draw_buttons():
-    """Vẽ các nút."""
-    for button in buttons.values():
-        pygame.draw.rect(DISPLAYSURF, button["color"], button["rect"], border_radius=15)
-        text = font.render(button["text"], True, BLACK)
-        text_rect = text.get_rect(center=button["rect"].center)
-        DISPLAYSURF.blit(text, text_rect)
+def change_size():
+    global XMARGIN, YMARGIN, BOXSIZE
+    if BOARDWIDTH == 14:
+        BOXSIZE = 55
+    elif BOARDWIDTH == 20:
+        BOXSIZE = 44
+    XMARGIN = (WINDOWWIDTH - (BOXSIZE * BOARDWIDTH)) // 2
+    YMARGIN = (WINDOWHEIGHT - (BOXSIZE * BOARDHEIGHT)) // 2
 
-def handle_click_setting():
-    global BOARDWIDTH, BOARDHEIGHT, SOUND_ON, XMARGIN, YMARGIN, BOXSIZE, HEROES_DICT, LEVEL, NUMHEROES_ONBOARD, NUMSAMEHEROES
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            pygame.quit()
-            sys.exit()
-        elif event.type == MOUSEBUTTONUP:
-            mouse_x, mouse_y = event.pos
-            for key, button in buttons.items():
-                if button["rect"].collidepoint((mouse_x, mouse_y)):
-                    if key == "Board: 12 x 7":
-                        buttons["Board: 12 x 7"]["color"] = GREEN
-                        buttons["Board: 18 x 10"]["color"] = GRAY
-                        buttons["Board: 14 x 8"]["color"] = GRAY
-                        BOARDHEIGHT = 9
-                        BOARDWIDTH = 14
-                        BOXSIZE = 55
-                        NUMHEROES_ONBOARD = 21
-                        NUMSAMEHEROES = 4
-                        XMARGIN = (WINDOWWIDTH - (BOXSIZE * BOARDWIDTH)) // 2
-                        YMARGIN = (WINDOWHEIGHT - (BOXSIZE * BOARDHEIGHT)) // 2
-                        HEROES_DICT = Createheroes()
-                    elif key == "Board: 14 x 8":
-                        buttons["Board: 12 x 7"]["color"] = GRAY
-                        buttons["Board: 18 x 10"]["color"] = GRAY
-                        buttons["Board: 14 x 8"]["color"] = GREEN
-                        BOARDHEIGHT = 10
-                        BOARDWIDTH = 16
-                        BOXSIZE = 50
-                        NUMHEROES_ONBOARD = 28
-                        NUMSAMEHEROES = 4
-                        XMARGIN = (WINDOWWIDTH - (BOXSIZE * BOARDWIDTH)) // 2
-                        YMARGIN = (WINDOWHEIGHT - (BOXSIZE * BOARDHEIGHT)) // 2
-                        HEROES_DICT = Createheroes()
-                    elif key == "Board: 18 x 10":
-                        buttons["Board: 12 x 7"]["color"] = GRAY
-                        buttons["Board: 18 x 10"]["color"] = GREEN
-                        buttons["Board: 14 x 8"]["color"] = GRAY
-                        BOARDHEIGHT = 12
-                        BOARDWIDTH = 20
-                        BOXSIZE = 44
-                        NUMHEROES_ONBOARD = 45
-                        NUMSAMEHEROES = 4
-                        XMARGIN = (WINDOWWIDTH - (BOXSIZE * BOARDWIDTH)) // 2
-                        YMARGIN = (WINDOWHEIGHT - (BOXSIZE * BOARDHEIGHT)) // 2
-                        HEROES_DICT = Createheroes()
-                    elif key == "sound_toggle":
-                        SOUND_ON = not SOUND_ON  # Đảo trạng thái âm thanh
-                        buttons["sound_toggle"]["text"] = f"Music: {'ON' if SOUND_ON else 'OFF'}"
-                        if SOUND_ON:
-                            try:
-                                pygame.mixer.music.load(listMusicBG[LEVEL - 1])  # Tải nhạc nền
-                                pygame.mixer.music.play(-1)  # Phát nhạc nền lặp lại
-                            except pygame.error as e:
-                                print(f"Error loading music: {e}")
-                        else:
-                            pygame.mixer.music.stop()  # Dừng nhạc
-                    elif key == "back":
-                        return "back"
 
-def showSetting():
+def display_score(score = 0):
+    ScoreFont = pygame.font.Font('freesansbold.ttf', 30)
+    ScoreSurf = ScoreFont.render(f'Score: {score}', True, YELLOW)
+    ScoreRect = ScoreSurf.get_rect()
+    ScoreRect.center = (9 * WINDOWWIDTH // 10, WINDOWHEIGHT // 10)
+    DISPLAYSURF.blit(ScoreSurf, ScoreRect)
+    pygame.draw.rect(DISPLAYSURF, YELLOW, ScoreRect, -1)
+    pygame.display.update()
+
+
+def main():
+    """Hàm chính của trò chơi"""
+    global FPSCLOCK, DISPLAYSURF, BASICFONT, LIVESFONT, LEVEL, font, title_font, USER, SCORE, BOARDWIDTH, BOARDHEIGHT
+    
+    # Khởi tạo Pygame
+    pygame.init()
+    pygame.mixer.init()
+    FPSCLOCK = pygame.time.Clock()
+    DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT))
+    pygame.display.set_caption('Pikachu')
+
+    # Khởi tạo font
+    font = pygame.font.Font(pygame.font.match_font('arial'), 32)
+    title_font = pygame.font.Font(pygame.font.match_font('arial'), 50)
+    BASICFONT = pygame.font.SysFont('comicsansms', 40)
+    LIVESFONT = pygame.font.SysFont('comicsansms', 45)
+    
+    # Hiển thị màn hình xác thực (đăng nhập/đăng ký)
+    while showMainAuthScreen():
+        continue
+
+    # Vòng lặp chính của trò chơi
     while True:
-        draw_background()
-        draw_settings_box()
-        draw_buttons()
-        draw_title()
-        if handle_click_setting() == "back":
-            return
-        pygame.display.update()
+        # Hiển thị màn hình bắt đầu và nhận lựa chọn từ người chơi
+        choice = showStartScreen()
+        
+        # Biến cờ để kiểm tra trạng thái chơi
+        game_running = True
+
+        # Xử lý các lựa chọn từ màn hình bắt đầu
+        if choice == "Newgame" or choice == "Continue":
+            if choice == "Newgame":
+                LEVEL = 1
+                SCORE = 0
+                USER["Board"] = getRandomizedBoard()
+            else:
+                LEVEL = USER["Level"]
+                SCORE = USER["Score"]
+                BOARDWIDTH = len(USER["Board"][0])
+                BOARDHEIGHT = len(USER["Board"])
+            
+            # Cập nhật kích thước và tài nguyên
+            change_size()
+            random.shuffle(listMusicBG)
+            
+            # Vòng lặp cấp độ
+            while LEVEL <= LEVELMAX and game_running:
+                if not runGame():
+                    game_running = False
+                    break
+                LEVEL += 1
+                pygame.time.wait(1000)  # Tạm dừng giữa các cấp độ
+            
+            # Hiển thị màn hình kết thúc nếu hoàn thành trò chơi
+            if game_running:
+                showGameOverScreen()
+        elif choice == "Setting":
+            # Hiển thị cài đặt
+            showSetting()
 
 
 if __name__ == '__main__':
