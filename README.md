@@ -13,7 +13,7 @@ Thư mục dự án: **Pikachu/**, bao gồm:
 ## **Hướng dẫn triển khai**
 
 ### **1. Cài đặt**
-Đầu tiên, bạn cần cài đặt Python (phiên bản >= 3.8). Sau đó cài đặt thư viện Pygame qua pip:
+Đầu tiên, bạn cần cài đặt Python (phiên bản >= 3.8). Sau đó cài đặt các thư viện trong tệp `requirements.txt` qua pip:
 ```bash
 pip install -r requirements.txt
 ```
