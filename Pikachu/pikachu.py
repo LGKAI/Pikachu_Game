@@ -1,10 +1,13 @@
 import pygame, sys, random, copy, time, collections, os, json
 from pygame.locals import *
 from datetime import datetime
+import numpy as np
+import scipy.ndimage
+
 
 """Đặt các cấu hình mặc định"""
 FPS = 60
-WINDOWWIDTH = 1400
+WINDOWWIDTH = 1214
 WINDOWHEIGHT = 680
 BOXSIZE = 55
 BOARDWIDTH = 14
@@ -15,7 +18,7 @@ TIMEBAR_LENGTH = 300
 TIMEBAR_WIDTH = 30
 LEVELMAX = 5
 LIVES = 10
-GAMETIME = 400
+GAMETIME = 360
 GETHINTTIME = 20
 SOUND_ON = True 
 LEVEL = 1 
@@ -49,7 +52,7 @@ aegis = pygame.image.load('Resources/others/aegis_2.jpg')
 aegis = pygame.transform.scale(aegis, (45, 45))
 pygame.font.init()
 # Load background
-startBG = pygame.image.load('Resources/Background/startBG.jpg')
+startBG = pygame.image.load('Resources/Background/startBG.png')
 startBG = pygame.transform.scale(startBG, (WINDOWWIDTH, WINDOWHEIGHT))
 BG = pygame.image.load('Resources/Background/main.png')
 BG = pygame.transform.scale(BG, (WINDOWWIDTH, WINDOWHEIGHT))
@@ -61,15 +64,17 @@ getPointSound = pygame.mixer.Sound('Resources/sound_effect/victory.mp3')
 WrongSound = pygame.mixer.Sound('Resources/sound_effect/wrong.mp3')
 startScreenSound = pygame.mixer.Sound('Resources/sound_effect/warriors-of-the-night-assemble.wav')
 listMusicBG = ["Resources/BGmusic/" + i for i in os.listdir("Resources/BGmusic")]
-
-
+font_path = "Resources\Fonts\Jersey15-Regular.ttf"
+click = pygame.mixer.Sound("Resources/sound_effect/mouse_click.mp3")
 """Xử lý đăng kí, đăng nhập tài khoản"""
+def mouseclick():
+    click.play()
 
 def showLoginScreen():
     """Hiển thị màn hình đăng nhập"""
-    login_font = pygame.font.SysFont('comicsansms', 50)
-    input_font = pygame.font.SysFont('comicsansms', 40)
-    button_font = pygame.font.SysFont('comicsansms', 45)
+    login_font = pygame.font.Font(font_path, 50)
+    input_font = pygame.font.Font(font_path, 40)
+    button_font = pygame.font.Font(font_path, 45)
     username = ""
     password = ""
     active_field = "username"
@@ -80,53 +85,76 @@ def showLoginScreen():
     field_height = 50
     label_offset_x = 80
     text_offset_y = -2
-    button_width = 250
-    button_height = 60
-    button_font = pygame.font.SysFont('comicsansms', 45)
-    back_button_rect = pygame.Rect(10, 10, 120, 50)
-    back_button_text = button_font.render("BACK", True, WHITE)
-    back_button_text_rect = back_button_text.get_rect(center=back_button_rect.center)
+    sigma = 5
+    startBG = pygame.image.load("Resources/Background/startBG.png")
+    startBG = pygame.transform.scale(startBG, (WINDOWWIDTH, WINDOWHEIGHT))
+    arr = pygame.surfarray.array3d(startBG)  # Chuyển thành numpy array
+    blurred_arr = scipy.ndimage.gaussian_filter(arr, sigma=(sigma, sigma, 0))  # Làm mờ Gaussian
+    blurred_bg =  pygame.surfarray.make_surface(blurred_arr)
+    login_button = pygame.image.load("Resources/Buttons/Blank/A Buttons Medium1.png")
+    login_button_hover = pygame.image.load("Resources/Buttons/Blank/B Buttons Medium2.png")
+    login_button = pygame.transform.scale(login_button,(240, 80))
+    login_button_hover = pygame.transform.scale(login_button_hover,(240, 80))
+    login_button_rect = login_button.get_rect()
+    login_button_rect.center = (WINDOWWIDTH // 2 , WINDOWHEIGHT//2 + 100)
+    button_text = login_font.render("LOGIN", True, (255,255,0))
+    button_rect = button_text.get_rect(center = (WINDOWWIDTH // 2 , WINDOWHEIGHT//2 + 100) )
+    login_title = pygame.image.load("Resources/others/login2.png")
+    login_title_rect = login_title.get_rect()
+    login_title_rect.center = (WINDOWWIDTH//2, 80)
+    board = pygame.image.load("Resources/others/Board.png")
+    board = pygame.transform.scale(board,(720,660))
+    board_rect = board.get_rect()
+    board_rect.center = (WINDOWWIDTH//2, WINDOWHEIGHT//2)
+    back = pygame.image.load("Resources/Buttons/Back2/A_Back1.png")
+    back = pygame.transform.scale(back,(240,80))
+    back_hover = pygame.image.load("Resources/Buttons/Back2/B_Back1.png")
+    back_hover = pygame.transform.scale(back_hover,(240,80))
+    back_rect = back.get_rect()
+    back_rect.center = (120,60)
     while True:
-        # Vẽ nền trắng
-        DISPLAYSURF.fill(WHITE)
+        # Vẽ nền
+        DISPLAYSURF.blit(blurred_bg, (0,0))
+        DISPLAYSURF.blit(board,board_rect)
 
         # Tiêu đề
-        title_text = login_font.render("LOGIN", True, (255, 0, 0))  # Chữ đỏ
-        title_rect = title_text.get_rect(center=(WINDOWWIDTH // 2, 100))
-        DISPLAYSURF.blit(title_text, title_rect)
+        DISPLAYSURF.blit(login_title, login_title_rect)
 
         # Nhãn và trường nhập
-        username_label = input_font.render("Username:", True, (255, 0, 0))  # Chữ đỏ
-        username_label_rect = username_label.get_rect(midright=(WINDOWWIDTH // 2 - field_width // 2 - label_offset_x, 200 + field_height // 2))
-        username_rect = pygame.Rect(WINDOWWIDTH // 2 - field_width // 2, 200, field_width, field_height)
+        username_label = input_font.render("Username:", True, (255, 255, 0))  # Chữ đỏ
+        username_label_rect = username_label.get_rect(midright=(WINDOWWIDTH // 2 - field_width // 2 - label_offset_x + 140, 200 + field_height // 2))
+        username_rect = pygame.Rect(WINDOWWIDTH // 2 - field_width // 2 + 90, 200, field_width, field_height)
 
-        password_label = input_font.render("Password:", True, (255, 0, 0))  # Chữ đỏ
-        password_label_rect = password_label.get_rect(midright=(WINDOWWIDTH // 2 - field_width // 2 - label_offset_x, 300 + field_height // 2))
-        password_rect = pygame.Rect(WINDOWWIDTH // 2 - field_width // 2, 300, field_width, field_height)
+        password_label = input_font.render("Password:", True, (255, 255, 0))  # Chữ đỏ
+        password_label_rect = password_label.get_rect(midright=(WINDOWWIDTH // 2 - field_width // 2 - label_offset_x + 140, 300 + field_height // 2))
+        password_rect = pygame.Rect(WINDOWWIDTH // 2 - field_width // 2 + 90, 300, field_width, field_height)
 
         # Vẽ nhãn và trường nhập
         DISPLAYSURF.blit(username_label, username_label_rect)
+        pygame.draw.rect(DISPLAYSURF, WHITE, username_rect)
         pygame.draw.rect(DISPLAYSURF, BLACK, username_rect, 2)
         DISPLAYSURF.blit(input_font.render(username, True, BLACK), (username_rect.x + 10, username_rect.y + text_offset_y))
 
         DISPLAYSURF.blit(password_label, password_label_rect)
+        pygame.draw.rect(DISPLAYSURF, WHITE, password_rect)
         pygame.draw.rect(DISPLAYSURF, BLACK, password_rect, 2)
         DISPLAYSURF.blit(input_font.render("*" * len(password), True, BLACK), (password_rect.x + 10, password_rect.y + text_offset_y))
 
+        # Nút back
+        DISPLAYSURF.blit(back, back_rect)
         # Nút LOGIN
-        login_button_rect = pygame.Rect(WINDOWWIDTH // 2 - button_width // 2, 400, button_width, button_height)
-        pygame.draw.rect(DISPLAYSURF, BLACK, login_button_rect)
-        login_button_text = button_font.render("LOGIN", True, (255, 0, 0))  # Chữ đỏ
-        login_button_text_rect = login_button_text.get_rect(center=login_button_rect.center)
-        DISPLAYSURF.blit(login_button_text, login_button_text_rect)
-
+        DISPLAYSURF.blit(login_button, login_button_rect)
+        DISPLAYSURF.blit(button_text, button_rect)
+        if login_button_rect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(login_button_hover, login_button_rect)
+            DISPLAYSURF.blit(button_text, button_rect)
+        if back_rect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(back_hover, back_rect)
         # Thông báo lỗi (nếu có)
         if error_message:
-            error_text = input_font.render(error_message, True, RED)
+            error_text = input_font.render(error_message, True, YELLOW)
             error_rect = error_text.get_rect(center=(WINDOWWIDTH // 2, 500))
             DISPLAYSURF.blit(error_text, error_rect)
-        pygame.draw.rect(DISPLAYSURF, BLACK, back_button_rect)
-        DISPLAYSURF.blit(back_button_text, back_button_text_rect)
         pygame.display.update()
 
         for event in pygame.event.get():
@@ -144,19 +172,21 @@ def showLoginScreen():
                         password = password[:-1]
                     else:
                         password += event.unicode
-            elif event.type == MOUSEBUTTONUP:
+            elif event.type == MOUSEBUTTONDOWN:
                 mousex, mousey = event.pos
                 if username_rect.collidepoint(mousex, mousey):
                     active_field = "username"
                 elif password_rect.collidepoint(mousex, mousey):
                     active_field = "password"
                 elif login_button_rect.collidepoint(mousex, mousey):
+                    mouseclick()
                     if check_login(username, password):
-                        return
+                        return False
                     else:
                         error_message = "Invalid username or password"
-                elif back_button_rect.collidepoint(mousex, mousey):
-                    return main()
+                elif back_rect.collidepoint(mousex, mousey):
+                    mouseclick()
+                    return True
 
 
 
@@ -210,9 +240,9 @@ def register_account(username, password):
 
 def showRegisterScreen():
     """Màn hình đăng kí"""
-    login_font = pygame.font.SysFont('comicsansms', 50)
-    input_font = pygame.font.SysFont('comicsansms', 40)
-    button_font = pygame.font.SysFont('comicsansms', 45)
+    login_font = pygame.font.Font('Resources\Fonts\Jersey15-Regular.ttf', 50)
+    input_font = pygame.font.Font('Resources\Fonts\Jersey15-Regular.ttf', 40)
+    button_font = pygame.font.Font('Resources\Fonts\Jersey15-Regular.ttf', 45)
     username = ""
     password = ""
     active_field = "username"
@@ -223,55 +253,76 @@ def showRegisterScreen():
     field_height = 50
     label_offset_x = 80  # Khoảng cách giữa nhãn và khung nhập
     text_offset_y = -5  # Điều chỉnh nhích chữ lên trên khung nhập
-    button_width = 250
-    button_height = 60
-    back_button_rect = pygame.Rect(10, 10, 120, 50)
-    back_button_text = button_font.render("BACK", True, WHITE)
-    back_button_text_rect = back_button_text.get_rect(center=back_button_rect.center)
-    while True:
-        DISPLAYSURF.fill(WHITE)
+    sigma = 5
+    startBG = pygame.image.load("Resources/Background/startBG.png")
+    startBG = pygame.transform.scale(startBG, (WINDOWWIDTH, WINDOWHEIGHT))
+    arr = pygame.surfarray.array3d(startBG)  # Chuyển thành numpy array
+    blurred_arr = scipy.ndimage.gaussian_filter(arr, sigma=(sigma, sigma, 0))  # Làm mờ Gaussian
+    blurred_bg =  pygame.surfarray.make_surface(blurred_arr)
+    register_button = pygame.image.load("Resources/Buttons/Blank/A Buttons Medium1.png")
+    register_button_hover = pygame.image.load("Resources/Buttons/Blank/B Buttons Medium2.png")
+    register_button = pygame.transform.scale(register_button,(240, 80))
+    register_button_hover = pygame.transform.scale(register_button_hover,(240, 80))
+    register_button_rect = register_button.get_rect()
+    register_button_rect.center = (WINDOWWIDTH // 2 , WINDOWHEIGHT//2 + 100)
+    button_text = login_font.render("REGISTER", True, (255,255,255))
+    button_rect = button_text.get_rect(center = (WINDOWWIDTH // 2 , WINDOWHEIGHT//2 + 100) )
+    register_title = pygame.image.load("Resources/others/register.png")
+    register_title_rect = register_title.get_rect()
+    register_title_rect.center = (WINDOWWIDTH//2, 80)
+    board = pygame.image.load("Resources/others/Board.png")
+    board = pygame.transform.scale(board,(720,660))
+    board_rect = board.get_rect()
+    board_rect.center = (WINDOWWIDTH//2, WINDOWHEIGHT//2)
+    back = pygame.image.load("Resources/Buttons/Back2/A_Back1.png")
+    back = pygame.transform.scale(back,(240,80))
+    back_hover = pygame.image.load("Resources/Buttons/Back2/B_Back1.png")
+    back_hover = pygame.transform.scale(back_hover,(240,80))
+    back_rect = back.get_rect()
+    back_rect.center = (120,60)
 
-        # Tiêu đề
-        title_text = login_font.render("REGISTER", True, BLACK)
-        title_rect = title_text.get_rect(center=(WINDOWWIDTH // 2, 100))
-        DISPLAYSURF.blit(title_text, title_rect)
+
+    while True:
+
+        DISPLAYSURF.blit(blurred_bg, (0,0))
+        DISPLAYSURF.blit(board, board_rect)
+        DISPLAYSURF.blit(register_title, register_title_rect)
+        DISPLAYSURF.blit(register_button, register_button_rect)
+        DISPLAYSURF.blit(button_text, button_rect)
+        DISPLAYSURF.blit(back, back_rect)
+        if register_button_rect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(register_button_hover, register_button_rect)
+            DISPLAYSURF.blit(button_text, button_rect)
+        if back_rect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(back_hover, back_rect)
 
         # Nhãn và trường nhập cho Username
-        username_label = input_font.render("Username:", True, BLACK)
-        username_label_rect = username_label.get_rect(midright=(WINDOWWIDTH // 2 - field_width // 2 - label_offset_x, 200 + field_height // 2))
-        username_rect = pygame.Rect(WINDOWWIDTH // 2 - field_width // 2, 200, field_width, field_height)
+        username_label = input_font.render("Username:", True, YELLOW)
+        username_label_rect = username_label.get_rect(midright=(WINDOWWIDTH // 2 - field_width // 2 - label_offset_x + 140, 200 + field_height // 2))
+        username_rect = pygame.Rect(WINDOWWIDTH // 2 - field_width // 2 + 90, 200, field_width, field_height)
 
         # Nhãn và trường nhập cho Password
-        password_label = input_font.render("Password:", True, BLACK)
-        password_label_rect = password_label.get_rect(midright=(WINDOWWIDTH // 2 - field_width // 2 - label_offset_x, 300 + field_height // 2))
-        password_rect = pygame.Rect(WINDOWWIDTH // 2 - field_width // 2, 300, field_width, field_height)
+        password_label = input_font.render("Password:", True, YELLOW)
+        password_label_rect = password_label.get_rect(midright=(WINDOWWIDTH // 2 - field_width // 2 - label_offset_x + 140, 300 + field_height // 2))
+        password_rect = pygame.Rect(WINDOWWIDTH // 2 - field_width // 2 + 90, 300, field_width, field_height)
 
         # Vẽ nhãn và trường nhập
         DISPLAYSURF.blit(username_label, username_label_rect)
+        pygame.draw.rect(DISPLAYSURF, WHITE, username_rect)
         pygame.draw.rect(DISPLAYSURF, BLACK, username_rect, 2)
         DISPLAYSURF.blit(input_font.render(username, True, BLACK), (username_rect.x + 10, username_rect.y + text_offset_y))
 
         DISPLAYSURF.blit(password_label, password_label_rect)
+        pygame.draw.rect(DISPLAYSURF, WHITE, password_rect)
         pygame.draw.rect(DISPLAYSURF, BLACK, password_rect, 2)
         DISPLAYSURF.blit(input_font.render("*" * len(password), True, BLACK), (password_rect.x + 10, password_rect.y + text_offset_y))
 
-        # Nút REGISTER
-        register_button_rect = pygame.Rect(WINDOWWIDTH // 2 - button_width // 2, 400, button_width, button_height)
-        pygame.draw.rect(DISPLAYSURF, BLACK, register_button_rect)
-        register_button_text = button_font.render("REGISTER", True, WHITE)
-        register_button_text_rect = register_button_text.get_rect(center=register_button_rect.center)
-        DISPLAYSURF.blit(register_button_text, register_button_text_rect)
-
         # Thông báo (nếu có)
         if message:
-            message_text = input_font.render(message, True, RED)
+            message_text = input_font.render(message, True, YELLOW)
             message_rect = message_text.get_rect(center=(WINDOWWIDTH // 2, 500))
             DISPLAYSURF.blit(message_text, message_rect)
 
-        # Nút BACK
-        pygame.draw.rect(DISPLAYSURF, BLACK, back_button_rect)
-        DISPLAYSURF.blit(back_button_text, back_button_text_rect)
-        
 
         pygame.display.update()
 
@@ -298,40 +349,73 @@ def showRegisterScreen():
                 elif password_rect.collidepoint(mousex, mousey):
                     active_field = "password"
                 elif register_button_rect.collidepoint(mousex, mousey):
+                    mouseclick()
                     if register_account(username, password):
                         message = "Registration successful!"
-                        return
+                        return False
                     else:
                         message = "Username already exists!"
-                elif back_button_rect.collidepoint(mousex, mousey):
-                    return main()
+                elif back_rect.collidepoint(mousex, mousey):
+                    mouseclick()
+                    return True
 
 
 # Hàm vẽ màn hình đăng nhập
 def showMainAuthScreen():
     """Hiển thị màn hình đăng nhập, đăng ký"""
-    login_font = pygame.font.SysFont('comicsansms', 50)
-    button_font = pygame.font.SysFont('comicsansms', 45)
-
+    login_font = pygame.font.Font('Resources/Fonts/Jersey15-Regular.ttf', 45)
+    button_font = pygame.font.Font('Resources/Fonts/Jersey15-Regular.ttf', 45)
+    login_button = pygame.image.load("Resources/Buttons/Blank/A Buttons Medium1.png")
+    login_button = pygame.transform.scale(login_button,(240,80))
+    login_button_hover = pygame.image.load("Resources/Buttons/Blank/B Buttons Medium2.png")
+    login_button_hover = pygame.transform.scale(login_button_hover,(240,80))
+    login_button_rect = login_button.get_rect()
+    login_button_rect.center = (WINDOWWIDTH//2, WINDOWHEIGHT // 2 - 60)
+    login_text = button_font.render("LOGIN", True, YELLOW)
+    login_text_rect = login_text.get_rect(center = (WINDOWWIDTH//2, WINDOWHEIGHT // 2 - 60) )
+    register_button = pygame.image.load("Resources/Buttons/Blank/A Buttons Medium1.png")
+    register_button = pygame.transform.scale(register_button,(240,80))
+    register_button_hover = pygame.image.load("Resources/Buttons/Blank/B Buttons Medium2.png")
+    register_button_hover = pygame.transform.scale(register_button_hover,(240,80))
+    register_button_rect = register_button.get_rect()
+    register_button_rect.center = (WINDOWWIDTH//2, WINDOWHEIGHT // 2 + 60)
+    register_text = button_font.render("REGISTER", True, WHITE)
+    register_text_rect = register_text.get_rect(center = (WINDOWWIDTH//2, WINDOWHEIGHT // 2 + 60) )
+    sigma = 5
+    startBG = pygame.image.load("Resources/Background/startBG.png")
+    startBG = pygame.transform.scale(startBG, (WINDOWWIDTH, WINDOWHEIGHT))
+    arr = pygame.surfarray.array3d(startBG)  # Chuyển thành numpy array
+    blurred_arr = scipy.ndimage.gaussian_filter(arr, sigma=(sigma, sigma, 0))  # Làm mờ Gaussian
+    blurred_bg =  pygame.surfarray.make_surface(blurred_arr)
+    board = pygame.image.load("Resources/others/Board.png")
+    board = pygame.transform.scale(board,(600,550))
+    board_rect = board.get_rect()
+    board_rect.center = (WINDOWWIDTH//2, WINDOWHEIGHT//2)
+    welcome = pygame.image.load("Resources/others/welcome.png")
+    welcome_rect = welcome.get_rect(center = (WINDOWWIDTH//2, 125))
     while True:
-        DISPLAYSURF.fill(WHITE)
+        #Hiện background
+        DISPLAYSURF.blit(blurred_bg, (0,0))
 
-        # Hiển thị tiêu đề
-        title_text = login_font.render("WELCOME", True, BLACK)
-        title_rect = title_text.get_rect(center=(WINDOWWIDTH // 2, 100))
-        DISPLAYSURF.blit(title_text, title_rect)
+        #Hiện bảng
+        DISPLAYSURF.blit(board, board_rect)
 
-        # Nút Đăng nhập
-        login_button = button_font.render("LOGIN", True, WHITE)
-        login_button_rect = pygame.Rect(WINDOWWIDTH // 2 - 150, 200, 300, 60)
-        pygame.draw.rect(DISPLAYSURF, BLACK, login_button_rect)
-        DISPLAYSURF.blit(login_button, login_button_rect.move(80, 5))
+        #Hiện tiêu đề
+        DISPLAYSURF.blit(welcome, welcome_rect)
 
-        # Nút Đăng ký
-        register_button = button_font.render("REGISTER", True, WHITE)
-        register_button_rect = pygame.Rect(WINDOWWIDTH // 2 - 150, 300, 300, 60)
-        pygame.draw.rect(DISPLAYSURF, BLACK, register_button_rect)
-        DISPLAYSURF.blit(register_button, register_button_rect.move(60, 5))
+        #Hiện các nút
+        DISPLAYSURF.blit(login_button, login_button_rect)
+        DISPLAYSURF.blit(login_text, login_text_rect)
+        DISPLAYSURF.blit(register_button, register_button_rect)
+        DISPLAYSURF.blit(register_text, register_text_rect)
+        if login_button_rect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(login_button_hover, login_button_rect)
+            DISPLAYSURF.blit(login_text, login_text_rect)
+        
+        if register_button_rect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(register_button_hover, register_button_rect)
+            DISPLAYSURF.blit(register_text, register_text_rect)
+
 
         pygame.display.update()
 
@@ -343,62 +427,102 @@ def showMainAuthScreen():
             elif event.type == MOUSEBUTTONDOWN:
                 mousex, mousey = event.pos
                 if login_button_rect.collidepoint(mousex, mousey):
-                    showLoginScreen()  # Hiển thị màn hình đăng nhập
+                    mouseclick()
+                    return showLoginScreen()  # Hiển thị màn hình đăng nhập
                 elif register_button_rect.collidepoint(mousex, mousey):
-                    showRegisterScreen()  # Hiển thị màn hình đăng ký
-                return False
+                    mouseclick()
+                    return showRegisterScreen()  # Hiển thị màn hình đăng ký
+
 
 
 """Màn hình khởi đầu và các nút"""
 
 def showStartScreen():
+    Path = "Resources/Buttons/"
+    newGame1 = pygame.image.load( Path + "NewGame/A_Newgame1.png")
+    newGame2 = pygame.image.load( Path + "NewGame/B_NewGame1.png")
+    newGame1 = pygame.transform.scale(newGame1, (192,64))
+    newGame2 = pygame.transform.scale(newGame2, (192,64))
+    newGameRect = newGame1.get_rect()
+    newGameRect.center = (WINDOWWIDTH // 4 + 20, 4 * WINDOWHEIGHT // 9 + 80)
+    Continue1 = pygame.image.load(Path + "Continue/A_Continue1.png")
+    Continue2 = pygame.image.load(Path + "Continue/B_Continue1.png")
+    Continue1 = pygame.transform.scale(Continue1, (192,64))
+    Continue2 = pygame.transform.scale(Continue2, (192,64))
+    ContinueRect = Continue1.get_rect()
+    ContinueRect.center = (WINDOWWIDTH // 4 + 20, 4 * WINDOWHEIGHT // 9 )
+    Setting1 = pygame.image.load( Path + "Settings/A_Settings1.png")
+    Setting2 = pygame.image.load( Path + "Settings/B_Settings1.png")
+    Setting1 = pygame.transform.scale(Setting1, (192,64))
+    Setting2 = pygame.transform.scale(Setting2, (192,64))
+    SettingRect = Setting1.get_rect()
+    SettingRect.center = (WINDOWWIDTH // 4 + 20, 4 * WINDOWHEIGHT // 9 + 160)
+    Exit1 = pygame.image.load( Path + "Exit/A_Exit1.png")
+    Exit2 = pygame.image.load( Path + "Exit/B_Exit1.png")
+    Exit1 = pygame.transform.scale(Exit1, (192,64))
+    Exit2 = pygame.transform.scale(Exit2, (192,64))
+    exitRect = Exit1.get_rect()
+    exitRect.center = (WINDOWWIDTH // 4 + 20, 4 * WINDOWHEIGHT // 9 + 240)
+    BTrophy = pygame.image.load("Resources/others/Trophies/bronze_trophy.png")
+    STrophy = pygame.image.load("Resources/others/Trophies/silver_trophy.png")
+    GTrophy = pygame.image.load("Resources/others/Trophies/gold_trophy.png")
+    Leaderboard1 = pygame.image.load(Path + "Blank/A Buttons Medium1.png")
+    Leaderboard2 = pygame.image.load(Path + "Blank/B Buttons Medium2.png")
+    Leaderboard1 = pygame.transform.scale(Leaderboard1, (192,64))
+    Leaderboard2 = pygame.transform.scale(Leaderboard2, (192,64))
+    leaderboardRect = Leaderboard1.get_rect()
+    leaderboardRect.center = ( 100, WINDOWHEIGHT - 50)
+    STARTFONT = pygame.font.Font("Resources/Fonts/Jersey15-Regular.ttf", 36)
+    logo = pygame.image.load("Resources/others/logo.png")
     startScreenSound.play()
     while True:
         DISPLAYSURF.blit(startBG, (0, 0))
-        newGameSurf = BASICFONT.render('NEW GAME', True, YELLOW, BLACK)
-        newGameRect = newGameSurf.get_rect()
-        newGameRect.center = (WINDOWWIDTH // 2, 4 * WINDOWHEIGHT // 8)
-        DISPLAYSURF.blit(newGameSurf, newGameRect)
-        pygame.draw.rect(DISPLAYSURF, BLACK, newGameRect, 4)
-        SettingSurf = BASICFONT.render('SETTINGS', True, YELLOW, BLACK)
-        SettingRect = SettingSurf.get_rect()
-        SettingRect.center = (WINDOWWIDTH // 2, 5 * WINDOWHEIGHT // 8)
-        DISPLAYSURF.blit(SettingSurf, SettingRect)
-        pygame.draw.rect(DISPLAYSURF, BLACK, SettingRect, 4)
-        ContinueSurf = BASICFONT.render('CONTINUE', True, YELLOW, BLACK)
-        ContinueRect = ContinueSurf.get_rect()
-        ContinueRect.center = (WINDOWWIDTH // 2, 3 * WINDOWHEIGHT // 8)
-        DISPLAYSURF.blit(ContinueSurf, ContinueRect)
-        pygame.draw.rect(DISPLAYSURF, BLACK, ContinueRect, 4)
-        # Render "LEADERBOARD" button
-        leaderboardSurf = BASICFONT.render('LEADERBOARD', True, YELLOW, BLACK)  # Nội dung nút
-        leaderboardRect = leaderboardSurf.get_rect()
-        leaderboardRect.center = (WINDOWWIDTH // 2, 6 * WINDOWHEIGHT // 8)  # Vị trí nút
-        DISPLAYSURF.blit(leaderboardSurf, leaderboardRect)  # Vẽ text lên màn hình
-        pygame.draw.rect(DISPLAYSURF, BLACK, leaderboardRect, 4)
-        # Render "EXIT" button
-        exitSurf = BASICFONT.render('EXIT', True, YELLOW, BLACK)
-        exitRect = exitSurf.get_rect()
-        exitRect.center = (WINDOWWIDTH // 2, 7 * WINDOWHEIGHT // 8 )
-        DISPLAYSURF.blit(exitSurf, exitRect)
-        pygame.draw.rect(DISPLAYSURF, BLACK, ContinueRect, 4)
+        DISPLAYSURF.blit(logo, (WINDOWWIDTH//2 - 600, WINDOWHEIGHT // 10 - 60))
+        DISPLAYSURF.blit(newGame1, newGameRect)
+        DISPLAYSURF.blit(Continue1, ContinueRect)
+        DISPLAYSURF.blit(Setting1, SettingRect)
+        DISPLAYSURF.blit(Exit1, exitRect)
+        DISPLAYSURF.blit(Leaderboard1, leaderboardRect)
+        DISPLAYSURF.blit(BTrophy, ( 40, WINDOWHEIGHT - 66))
+        DISPLAYSURF.blit(STrophy, (85, WINDOWHEIGHT - 66))
+        DISPLAYSURF.blit(GTrophy, (130, WINDOWHEIGHT - 66))
+        if newGameRect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(newGame2,newGameRect)
+        if ContinueRect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(Continue2, ContinueRect)
+        if SettingRect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(Setting2, SettingRect)
+        if exitRect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(Exit2, exitRect)
+        if leaderboardRect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(Leaderboard2, leaderboardRect)
+            DISPLAYSURF.blit(BTrophy, ( 40, WINDOWHEIGHT - 66))
+            DISPLAYSURF.blit(STrophy, (85, WINDOWHEIGHT - 66))
+            DISPLAYSURF.blit(GTrophy, (130, WINDOWHEIGHT - 66))
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == MOUSEBUTTONUP:
+            if event.type == MOUSEMOTION:
+                mousex, mousey = event.pos
+            elif event.type == MOUSEBUTTONDOWN:
                 mousex, mousey = event.pos
                 if newGameRect.collidepoint((mousex, mousey)):
+                    mouseclick()
                     return "Newgame"
                 elif SettingRect.collidepoint((mousex, mousey)):
+                    mouseclick()
                     return "Setting"
                 elif ContinueRect.collidepoint((mousex, mousey)):
+                    mouseclick()
                     return "Continue"
                 elif exitRect.collidepoint((mousex, mousey)):
+                    mouseclick()
                     pygame.quit()
                     sys.exit()  # Quit the application
                     # Xử lý click vào nút "LEADERBOARD"
                 elif leaderboardRect.collidepoint((mousex, mousey)):
+                    mouseclick()
                     showLeaderboard(DISPLAYSURF, BASICFONT, WINDOWWIDTH, WINDOWHEIGHT)
                     return
         pygame.display.update()
@@ -407,73 +531,128 @@ def showStartScreen():
 
 """Bảng Setting"""
 
+"""Các nút"""
+def get_buttons(directory, position,scale):
+    List_dir = os.listdir(directory)
+    unscale_buttons = [pygame.image.load(directory + "/" + i) for i in List_dir]
+    buttons = [pygame.transform.scale(button, scale) for button in unscale_buttons]
+    button_rect = buttons[0].get_rect()
+    button_rect.center = position
+    return buttons[2],buttons[0],buttons[1], button_rect
+Easy1, Easy2, Easy3, Easy_rect = get_buttons("Resources/Buttons/Easy",(WINDOWWIDTH//2, WINDOWHEIGHT//2 - 100), (192,64))
+Normal1, Normal2, Normal3, Normal_rect = get_buttons("Resources/Buttons/Normal",(WINDOWWIDTH//2, WINDOWHEIGHT//2 - 25), (192,64))
+Hard1, Hard2, Hard3, Hard_rect = get_buttons("Resources/Buttons/Hard",(WINDOWWIDTH//2, WINDOWHEIGHT//2 + 50), (192,64) )
+sound1, sound2, sound3, sound_rect = get_buttons("Resources/Buttons/Music",(WINDOWWIDTH//2 - 48, WINDOWHEIGHT//2 + 125), (64,64))
+back1, back2, back3, back_rect = get_buttons("Resources/Buttons/Back", (WINDOWWIDTH//2 + 48, WINDOWHEIGHT//2 + 125), (64,64))
+
+
 # Các nút
 buttons = {
-    "Board: 12 x 7": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 -100, 200, 50), "text": "Board: 12 x 7", "color": GREEN},
-    "Board: 14 x 8": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 -25, 200, 50), "text": "Board: 14 x 8", "color": GRAY},
-    "Board: 18 x 10": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 + 50, 200, 50), "text": "Board: 18 x 10", "color": GRAY},
-    "sound_toggle": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 + 125, 200, 50), "text": "Sound: ON", "color": GRAY},
-    "back": {"rect": pygame.Rect(WINDOWWIDTH//2 - 100, WINDOWHEIGHT//2 + 200, 200, 50), "text": "Back", "color": YELLOW},
+    "Board: 12 x 7": {
+        "image_on" : Easy1,
+        "image_off": Easy2,
+        "image_hover": Easy3,
+        "rect": Easy_rect,
+        "mode": True
+        },
+    "Board: 14 x 8": {
+        "image_on" : Normal1,
+        "image_off": Normal2,
+        "image_hover": Normal3,
+        "rect": Normal_rect,
+        "mode" : False
+    },
+    "Board: 18 x 10": {
+        "image_on" : Hard1,
+        "image_off" : Hard2,
+        "image_hover": Hard3,
+        "rect": Hard_rect,
+        "mode": False
+    },
+    "sound_toggle": {
+        "image_on" : sound1,
+        "image_off": sound2,
+        "image_hover": sound3,
+        "rect": sound_rect,
+        "mode": SOUND_ON
+    },
+    "back": {
+        "image_on": back1,
+        "image_off": back2,
+        "image_hover": back3, 
+        "rect": back_rect,
+        "mode": True
+    },
 }
+#Làm mờ background
+sigma = 5
+startBG = pygame.image.load("Resources/Background/startBG.png")
+startBG = pygame.transform.scale(startBG, (WINDOWWIDTH, WINDOWHEIGHT))
+arr = pygame.surfarray.array3d(startBG)  # Chuyển thành numpy array
+blurred_arr = scipy.ndimage.gaussian_filter(arr, sigma=(sigma, sigma, 0))  # Làm mờ Gaussian
+blurred_bg =  pygame.surfarray.make_surface(blurred_arr)
 
-
+settingboard = pygame.image.load("Resources/others/Board.png")
+settingboard = pygame.transform.scale(settingboard,(600,550))
+settingboard_rect = settingboard.get_rect()
+settingboard_rect.center = (WINDOWWIDTH//2, WINDOWHEIGHT//2)
+setting = pygame.image.load("Resources/others/setting.png")
+setting = pygame.transform.scale(setting,(375,100))
+setting_rect = setting.get_rect()
+setting_rect.center = (WINDOWWIDTH//2, WINDOWHEIGHT//2 - 200)
 
 def draw_background():
-    """Vẽ Background"""
-    DISPLAYSURF.fill(BLACK)
+    """Vẽ Background bị làm mờ"""
+    DISPLAYSURF.blit(blurred_bg, (0,0))
 
 
 def draw_settings_box():
     """Vẽ bảng cài đặt."""
-    box_rect = pygame.Rect(WINDOWWIDTH//2 - 200, WINDOWHEIGHT//2 - 225, 400, 500)
-    pygame.draw.rect(DISPLAYSURF, SKIN_COLOR, box_rect, border_radius=20)
-    pygame.draw.rect(DISPLAYSURF, WHITE, box_rect, 3, border_radius=20)
+    DISPLAYSURF.blit(settingboard,settingboard_rect)
 
 
 def draw_title():
-    """Vẽ tiêu đề bảng settings với viền."""
-    title_text = "Settings"
-    outline_color = BLACK  # Màu viền
-    text_color = YELLOW  # Màu chữ
-
-    # Tạo chữ có viền bằng cách render nhiều lớp xung quanh
-    for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2), (0, -2), (0, 2), (-2, 0), (2, 0)]:
-        title_outline = title_font.render(title_text, True, outline_color)
-        title_rect = title_outline.get_rect(center=(WINDOWWIDTH // 2 + dx,WINDOWHEIGHT//2 - 150 + dy))
-        DISPLAYSURF.blit(title_outline, title_rect)
-
-    # Vẽ chữ chính
-    title = title_font.render(title_text, True, text_color)
-    title_rect = title.get_rect()
-    title_rect.center = ((WINDOWWIDTH//2, WINDOWHEIGHT//2 - 150))
-    DISPLAYSURF.blit(title, title_rect)
+    """Vẽ tiêu đề bảng settings"""
+    DISPLAYSURF.blit(setting,setting_rect)
 
 # Các nút tùy chỉnh cài đặt
 def draw_buttons():
     """Vẽ các nút."""
     for button in buttons.values():
-        pygame.draw.rect(DISPLAYSURF, button["color"], button["rect"], border_radius=15)
-        text = font.render(button["text"], True, BLACK)
-        text_rect = text.get_rect(center=button["rect"].center)
-        DISPLAYSURF.blit(text, text_rect)
+        if button["mode"]:
+            DISPLAYSURF.blit(button["image_on"], button["rect"])
+        else:
+            DISPLAYSURF.blit(button["image_off"], button["rect"])
 
 
 # Tùy chỉnh các cài đặt phù hợp       
 def handle_click_setting():
     """Tùy chỉnh các cài đặt bằng nhấp chuột"""
     global BOARDWIDTH, BOARDHEIGHT, SOUND_ON, XMARGIN, YMARGIN, BOXSIZE, HEROES_DICT, LEVEL, NUMHEROES_ONBOARD, NUMSAMEHEROES
+    if buttons["Board: 12 x 7"]["rect"].collidepoint(pygame.mouse.get_pos()):
+        DISPLAYSURF.blit(buttons["Board: 12 x 7"]["image_hover"], buttons["Board: 12 x 7"]["rect"])
+    if buttons["Board: 14 x 8"]["rect"].collidepoint(pygame.mouse.get_pos()):
+        DISPLAYSURF.blit(buttons["Board: 14 x 8"]["image_hover"], buttons["Board: 14 x 8"]["rect"])
+    if buttons["Board: 18 x 10"]["rect"].collidepoint(pygame.mouse.get_pos()):
+        DISPLAYSURF.blit(buttons["Board: 18 x 10"]["image_hover"], buttons["Board: 18 x 10"]["rect"])
+    if buttons["sound_toggle"]["rect"].collidepoint(pygame.mouse.get_pos()):
+        DISPLAYSURF.blit(buttons["sound_toggle"]["image_hover"], buttons["sound_toggle"]["rect"])
+    if buttons["back"]["rect"].collidepoint(pygame.mouse.get_pos()):
+        DISPLAYSURF.blit(buttons["back"]["image_hover"], buttons["back"]["rect"])
+        
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
-        elif event.type == MOUSEBUTTONUP:
+        elif event.type == MOUSEBUTTONDOWN:
             mouse_x, mouse_y = event.pos
             for key, button in buttons.items():
                 if button["rect"].collidepoint((mouse_x, mouse_y)):
+                    mouseclick()
                     if key == "Board: 12 x 7":
-                        buttons["Board: 12 x 7"]["color"] = GREEN
-                        buttons["Board: 18 x 10"]["color"] = GRAY
-                        buttons["Board: 14 x 8"]["color"] = GRAY
+                        buttons["Board: 12 x 7"]["mode"] = True
+                        buttons["Board: 18 x 10"]["mode"] = False
+                        buttons["Board: 14 x 8"]["mode"] = False
                         BOARDHEIGHT = 9
                         BOARDWIDTH = 14
                         BOXSIZE = 55
@@ -483,9 +662,9 @@ def handle_click_setting():
                         YMARGIN = (WINDOWHEIGHT - (BOXSIZE * BOARDHEIGHT)) // 2
                         HEROES_DICT = Createheroes()
                     elif key == "Board: 14 x 8":
-                        buttons["Board: 12 x 7"]["color"] = GRAY
-                        buttons["Board: 18 x 10"]["color"] = GRAY
-                        buttons["Board: 14 x 8"]["color"] = GREEN
+                        buttons["Board: 12 x 7"]["mode"] = False
+                        buttons["Board: 18 x 10"]["mode"] = False
+                        buttons["Board: 14 x 8"]["mode"] = True
                         BOARDHEIGHT = 10
                         BOARDWIDTH = 16
                         BOXSIZE = 50
@@ -495,9 +674,9 @@ def handle_click_setting():
                         YMARGIN = (WINDOWHEIGHT - (BOXSIZE * BOARDHEIGHT)) // 2
                         HEROES_DICT = Createheroes()
                     elif key == "Board: 18 x 10":
-                        buttons["Board: 12 x 7"]["color"] = GRAY
-                        buttons["Board: 18 x 10"]["color"] = GREEN
-                        buttons["Board: 14 x 8"]["color"] = GRAY
+                        buttons["Board: 12 x 7"]["mode"] = False
+                        buttons["Board: 18 x 10"]["mode"] = True
+                        buttons["Board: 14 x 8"]["mode"] = False
                         BOARDHEIGHT = 12
                         BOARDWIDTH = 20
                         BOXSIZE = 44
@@ -508,7 +687,7 @@ def handle_click_setting():
                         HEROES_DICT = Createheroes()
                     elif key == "sound_toggle":
                         SOUND_ON = not SOUND_ON  # Đảo trạng thái âm thanh
-                        buttons["sound_toggle"]["text"] = f"Sound: {'ON' if SOUND_ON else 'OFF'}"
+                        buttons["sound_toggle"]["mode"] = SOUND_ON
                         if SOUND_ON:
                             try:
                                 pygame.mixer.music.load(listMusicBG[LEVEL - 1])  # Tải nhạc nền
@@ -557,28 +736,44 @@ def showLeaderboard(screen, font, WINDOWWIDTH, WINDOWHEIGHT):
     clock = pygame.time.Clock()  # Khởi tạo clock đúng cách
     leaderboard = load_leaderboard()  # Đọc dữ liệu từ file
     sorted_keys = sorted(leaderboard, key = lambda x: leaderboard[x], reverse= True)
-    if len(sorted_keys) >= 10:
-        sorted_keys =sorted_keys[:10]
+    if len(sorted_keys) >= 8:
+        sorted_keys =sorted_keys[:8]
     running = True
+    sigma = 5
+    startBG = pygame.image.load("Resources/Background/startBG.png")
+    startBG = pygame.transform.scale(startBG, (WINDOWWIDTH, WINDOWHEIGHT))
+    arr = pygame.surfarray.array3d(startBG)  # Chuyển thành numpy array
+    blurred_arr = scipy.ndimage.gaussian_filter(arr, sigma=(sigma, sigma, 0))  # Làm mờ Gaussian
+    blurred_bg =  pygame.surfarray.make_surface(blurred_arr)
+    board = pygame.image.load("Resources/others/leaderboard.png")
+    board = pygame.transform.scale_by(board,7)
+    board_rect = board.get_rect(center = (WINDOWWIDTH//2, WINDOWHEIGHT//2))
+    back = pygame.image.load("Resources/Buttons/Back2/A_Back1.png")
+    back_hover = pygame.image.load("Resources/Buttons/Back2/B_Back1.png")
+    back = pygame.transform.scale_by(back,2.5)
+    back_hover = pygame.transform.scale_by(back_hover, 2.5)
+    back_rect = back.get_rect(center = (120,60))
+    leaderboard_title = pygame.image.load("Resources/others/leaderboard_title.png")
+    leaderboard_title = pygame.transform.scale_by(leaderboard_title, 0.6)
+    leaderboard_title_rect = leaderboard_title.get_rect(center = (WINDOWWIDTH//2, 65))
     while running:
-        screen.fill((0, 0, 50))  # Nền xanh đậm
-        title = font.render("Leaderboard", True, (255, 255, 0))
-        screen.blit(title, (200, 50))
+        screen.blit(blurred_bg, (0,0))  # Nền xanh đậm
+        screen.blit(board,board_rect)
+        screen.blit(leaderboard_title, leaderboard_title_rect)
 
         for i, key in enumerate(sorted_keys):  # Hiển thị top 10
-            text = f"{i+1}. {key} - {leaderboard[key]}"
-            entry_text = font.render(text, True, (255, 255, 255))
-            screen.blit(entry_text, (100, 100 + i * 30))
+            if len(key) > 8:
+                text = text = f"{i+1}.  {key[:8]}... - {leaderboard[key]}"
+            else:
+                text = f"{i+1}.  {key} - {leaderboard[key]}"
+            entry_text =  pygame.font.Font("Resources/Fonts/Jersey15-Regular.ttf", 50).render(text, True, (255, 255, 200))
+            screen.blit(entry_text, (WINDOWWIDTH//2 - 200, 150 + i * 50))
 
-        # Vẽ nút "Return"
-        returnSurf = font.render('RETURN', True, YELLOW, BLACK)
-        returnRect = returnSurf.get_rect()
-        returnRect.center = (WINDOWWIDTH // 2, 4 * WINDOWHEIGHT // 5)  # Vị trí nút
-        screen.blit(returnSurf, returnRect)  # Vẽ nút lên màn hình
-        pygame.draw.rect(screen, BLACK, returnRect, 4)
-
+        # Vẽ nút "Back"
+        screen.blit(back,back_rect)
+        if back_rect.collidepoint(pygame.mouse.get_pos()):
+            screen.blit(back_hover,back_rect)
         pygame.display.flip()
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -588,7 +783,8 @@ def showLeaderboard(screen, font, WINDOWWIDTH, WINDOWHEIGHT):
                     running = False  # Thoát khỏi vòng lặp để quay lại màn hình chính
             elif event.type == pygame.MOUSEBUTTONUP:
                 mousex, mousey = event.pos
-                if returnRect.collidepoint((mousex, mousey)):  # Kiểm tra click vào nút "RETURN"
+                if back_rect.collidepoint((mousex, mousey)):  # Kiểm tra click vào nút "RETURN"
+                    mouseclick()
                     running = False  # Thoát vòng lặp khi click vào nút "RETURN"
 
         clock.tick(30)  # Điều chỉnh tốc độ FPS (30 FPS)
@@ -618,30 +814,31 @@ def Createheroes():
 """Màn hình khi dừng trò chơi"""
 
 def showPauseScreen():
-    button_font = pygame.font.SysFont('comicsansms', 30)
+    #Nút Resume
+    resume1, resume2, resume3, resume_rect = get_buttons("Resources/Buttons/Resume",(WINDOWWIDTH // 2, WINDOWHEIGHT // 2 - 40), (192,64))
+    
+    #Nút Exit
+    exit1, exit2, exit3, exit_rect = get_buttons("Resources/Buttons/Exit",(WINDOWWIDTH // 2, WINDOWHEIGHT // 2 + 40) ,(192,64) )
 
-    # Nút Resume
-    resume_button_rect = pygame.Rect(WINDOWWIDTH // 2 - 120, WINDOWHEIGHT // 2 - 70, 240, 50)
-    resume_text = button_font.render("RESUME", True, BLACK)
-
-    # Nút Exit
-    exit_button_rect = pygame.Rect(WINDOWWIDTH // 2 - 120, WINDOWHEIGHT // 2 + 20, 240, 50)
-    exit_text = button_font.render("EXIT", True, BLACK)
-
+    Board = pygame.image.load("Resources/others/Board.png")
+    Board = pygame.transform.scale(Board, (360,330))
+    Board_rect = Board.get_rect()
+    Board_rect.center = (WINDOWWIDTH//2, WINDOWHEIGHT // 2)
     while True:
         DISPLAYSURF.fill(BLACK)  # Màn hình tạm dừng
-
+        
+        DISPLAYSURF.blit(Board,Board_rect)
 
         # Vẽ nút Resume
-        pygame.draw.rect(DISPLAYSURF, WHITE, resume_button_rect)
-        DISPLAYSURF.blit(resume_text, resume_button_rect.move(70, 10))
+        DISPLAYSURF.blit(resume2, resume_rect)
 
         # Vẽ nút Exit
-        pygame.draw.rect(DISPLAYSURF, WHITE, exit_button_rect)
-        DISPLAYSURF.blit(exit_text, exit_button_rect.move(90, 10))
+        DISPLAYSURF.blit(exit2, exit_rect) 
 
-        pygame.display.update()
-
+        if resume_rect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(resume3, resume_rect)
+        if exit_rect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(exit3, exit_rect)
         # Xử lý sự kiện
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -649,11 +846,13 @@ def showPauseScreen():
                 sys.exit()
             elif event.type == MOUSEBUTTONDOWN:
                 mousex, mousey = event.pos
-                if resume_button_rect.collidepoint((mousex, mousey)):
+                if resume_rect.collidepoint((mousex, mousey)):
+                    mouseclick()
                     return  # Quay lại game
-                elif exit_button_rect.collidepoint((mousex, mousey)):
+                elif exit_rect.collidepoint((mousex, mousey)):
+                    mouseclick()
                     return "exit"  # Quay về màn hình chính
-
+        pygame.display.update()
 
 """Lưu lại màn chơi"""
 
@@ -773,6 +972,7 @@ def runGame():
                         return False  # Chỉ hiển thị gợi ý khi bấm phím N
                 hint = getHint(mainBoard)  # Lấy gợi ý
                 if event.key == K_n:  # Nếu có gợi ý hợp lệ
+                    SCORE = max(SCORE - 1, 0)
                     hint_visible = True  # Bật cờ hiển thị gợi ý
                     hint_display_start = time.time()  # Đặt thời gian bắt đầu hiển thị
                 if event.key == K_r:
@@ -951,7 +1151,6 @@ def showGameOverScreen():
         data = {}  # Nếu không tồn tại, bắt đầu với danh sách trống
 
     # Xử lý điểm số người chơi
-    user_exists = False
     if USER_NAME in data:
         data[USER_NAME] = max(SCORE, data[USER_NAME])
     else:
@@ -963,24 +1162,27 @@ def showGameOverScreen():
         json.dump(data, leaderboard, indent=4)
 
     # Hiển thị màn hình kết thúc
-    playAgainFont = pygame.font.Font('freesansbold.ttf', 50)
-    playAgainSurf = playAgainFont.render('EXIT', True, RED)
-    playAgainRect = playAgainSurf.get_rect()
-    playAgainRect.center = (WINDOWWIDTH // 2, 7 * WINDOWHEIGHT // 8)
-    DISPLAYSURF.blit(playAgainSurf, playAgainRect)
-    pygame.draw.rect(DISPLAYSURF, RED, playAgainRect, 3)
-    pygame.display.update()
+    exit = pygame.image.load("Resources/Buttons/Exit/A_Exit1.png")
+    exit_hover = pygame.image.load("Resources/Buttons/Exit/C_Exit1.png")
+    exit = pygame.transform.scale2x(exit)
+    exit_hover = pygame.transform.scale2x(exit_hover)
+    exit_rect = exit.get_rect()
+    exit_rect.center = (WINDOWWIDTH//2, WINDOWHEIGHT - 50)
 
     while True:
+        DISPLAYSURF.blit(exit, exit_rect)
+        if exit_rect.collidepoint(pygame.mouse.get_pos()):
+            DISPLAYSURF.blit(exit_hover, exit_rect)
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
             elif event.type == MOUSEBUTTONUP:
                 mousex, mousey = event.pos
-                if playAgainRect.collidepoint((mousex, mousey)):
+                if exit_rect.collidepoint((mousex, mousey)):
+                    mouseclick()
                     return
-
+        pygame.display.update()
 
 def getHint(board):
     boxPokesLocated = collections.defaultdict(list)
@@ -1146,7 +1348,7 @@ def main():
     # Khởi tạo font
     font = pygame.font.Font(pygame.font.match_font('arial'), 32)
     title_font = pygame.font.Font(pygame.font.match_font('arial'), 50)
-    BASICFONT = pygame.font.SysFont('comicsansms', 40)
+    BASICFONT = pygame.font.SysFont('pixel', 40)
     LIVESFONT = pygame.font.SysFont('comicsansms', 45)
     
     # Hiển thị màn hình xác thực (đăng nhập/đăng ký)
